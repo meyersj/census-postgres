@@ -11,6 +11,8 @@ values hardcoded in:
 acs2012_1yr
 acs2012_3yr
 acs2012_5yr
+census_geo
+census_working
 
 [host]
 maps2.trimet.org
