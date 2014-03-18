@@ -13,6 +13,9 @@ subj_area = 8
 table_sizes = []
 field_sizes = []
 
+"""
+#RETIRED#
+
 def check_table(name):
     global table_sizes
     table_sizes.append(len(name) + 1)
@@ -21,16 +24,12 @@ def check_field(name):
     global field_sizes
     field_sizes.append(len(name) + 1)
 
-"""RETIRED"""
-
-"""
 def format_name(name):
     name = name.replace(' ', '_').replace('-', '_')
     name = re.sub(r'\W+', '', name)
     if name[0].isdigit():
         name = '_' + name
     return name
-
 
 def build_table_names():
     names_dict = {}
@@ -116,7 +115,6 @@ def build_named_views(names_dict):
                 fout.write(field_alias)
         
         fout.write('COMMIT;\n\n')
-"""
 
 
 def open_summary_file():
@@ -127,12 +125,25 @@ def open_summary_file():
             if row[subj_area] != '':
                 print row[tbl_id] + ' ' + row[tbl_title] + ' ' + row[subj_area]
 
+def drop_named_views():
+    drop_view = "DROP VIEW IF EXISTS acs2012_5yr.{0};\n"
+
+    with open('scratch/table_names.txt', 'r') as f:
+        lines = f.read().splitlines()
+        
+    with open('scratch/drop_named_view_stored_by_tables.sql', 'w') as fout:
+        for line in lines:
+            if line[0] != '-':
+                fout.write(drop_view.format(line.split()[1]))          
+
+"""
+
 #Modify view_stored_tables.sql to strip fips out of geoid and build view_stored_by_tables_fips_edit.sql
 def view_fips_edit():
-    with open('view_stored_by_tables.sql', 'r') as f:
+    with open('../acs2012_1yr/view_stored_by_tables.sql', 'r') as f:
         lines = f.read().splitlines()
 
-    with open('view_stored_by_tables_fips.sql', 'w') as fout:
+    with open('../acs2012_1yr/view_stored_by_tables_fips_1yr.sql', 'w') as fout:
         for line in lines:
             fout.write(line + '\n')
 
@@ -141,7 +152,7 @@ def view_fips_edit():
 
 
 #Build drop_view_stored_by_tables.sql by getting each view name and building DROP command
-def drop_views():
+def build_drop_views():
     drop_view = "DROP VIEW IF EXISTS acs2012_5yr.{0};\n"
 
     with open('view_stored_by_tables.sql', 'r') as f:
@@ -153,32 +164,27 @@ def drop_views():
                 acs = line.split()[2].split('.')
                 fout.write(drop_view.format(acs[1]))
 
-"""RETIRED"""
-"""
-def drop_named_views():
-    drop_view = "DROP VIEW IF EXISTS acs2012_5yr.{0};\n"
 
-    with open('scratch/table_names.txt', 'r') as f:
-        lines = f.read().splitlines()
-        
-    with open('scratch/drop_named_view_stored_by_tables.sql', 'w') as fout:
-        for line in lines:
-            if line[0] != '-':
-                fout.write(drop_view.format(line.split()[1]))          
-"""
 
 #Build import_sequences.txt from list of tables
-def build_import_seq():
-    command = "COPY acs2012_5yr.tmp_seq{0} FROM '{1}{2}' WITH CSV;\n"
+def build_import_seq(year):
+    command = "COPY {0}.tmp_seq{1} FROM '{2}{3}' WITH CSV;\n"
+    summary_path = "C:/temp/census/ORWA_All_Geographies_acs2012_{0}yr/"
+    seq_files = "acs2012_{0}yr_{1}seq.txt"
+    import_seq = "import_sequences_orwa_{0}yr.sql"
+    acs = "acs2012_{0}yr"
 
-    nbg = "C:/temp/census/All_Not_Tracts_Block_Groups/"
-    bgo = "C:/temp/census/All_Tracts_Block_Groups_Only/"
+    seq_files_named = seq_files.format(year,"or")
+    with open("scratch/" + seq_files_named,  'r') as f:
+            or_files = f.read().splitlines()
 
-    with open('files.txt', 'r') as f:
-        files = f.read().splitlines()
+    seq_files_named = seq_files.format(year,"wa")
+    with open("scratch/" + seq_files_named,  'r') as f:
+            wa_files = f.read().splitlines()
 
-    with open('files.sql', 'w') as fout:
-        for f in files:
+    import_seq_named = import_seq.format(year)
+    with open('import_sequences_orwa_3yr.sql', 'w') as fout:
+        for f in or_files:
             pre = f[0:6]
             post = f[-7:] 
             seq_num = f[-11:-7]
@@ -186,23 +192,22 @@ def build_import_seq():
             if f[0] == 'm' :
                 seq = seq + '_moe'
 
-            ore = pre + 'or' + seq_num + post
-            wash = pre + 'wa' + seq_num + post
+            seq_command = command.format(acs.format(year), seq, summary_path.format(year), f)
+            fout.write(seq_command)
 
-            ore_c1 = command.format(seq, nbg, ore)
-            ore_c2 = command.format(seq, bgo, ore)
-            wash_c1 = command.format(seq, nbg, wash)
-            wash_c2 = command.format(seq, bgo, wash)
-            
-            fout.write(ore_c1)
-            fout.write(ore_c2)
-            fout.write(wash_c1)
-            fout.write(wash_c2)
-            
-            print ore_c1, ore_c2, wash_c1, wash_c2
+        for f in wa_files:
+            pre = f[0:6]
+            post = f[-7:] 
+            seq_num = f[-11:-7]
+            seq = seq_num
+            if f[0] == 'm' :
+                seq = seq + '_moe'
+
+            seq_command = command.format(acs.format(year), seq, summary_path.format(year), f)
+            print seq_command
+            fout.write(seq_command)
 
 if __name__ == '__main__':
-    #names = build_table_names()
-    #build_named_views(names)
-    view_fips_edit()
-    drop_views()
+    
+    #build_import_seq("3")
+    #view_fips_edit()
